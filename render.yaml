@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: tarun-adari-portfolio
+    runtime: node
+    plan: free
+    region: ohio
+    buildCommand: npm install --production
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8000
+      - key: ANTHROPIC_API_KEY
+        sync: false
