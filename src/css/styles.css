@@ -905,10 +905,78 @@
 
   /* ── Responsive ── */
   @media (max-width: 768px) {
-    .about-grid { grid-template-columns: 1fr; }
+
+    /* Nav */
+    nav { padding: 0 1.25rem; }
+    .nav-links { display: none; }
+
+    /* Sections */
+    section { padding: 60px 1.25rem; }
+
+    /* Hero */
+    #hero {
+      padding-top: 100px;
+      padding-bottom: 60px;
+      padding-left: 1.25rem;
+      padding-right: 1.25rem;
+    }
+    .hero-name { letter-spacing: -1px; }
+    .hero-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .hero-actions .btn-dark,
+    .hero-actions .btn-outline,
+    .hero-actions .btn-ai {
+      justify-content: center;
+      width: 100%;
+    }
+
+    /* Stats — 2×2 grid */
+    .hero-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      width: 100%;
+      margin-top: 2.5rem;
+    }
+    .stat {
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.25rem;
+    }
+    .stat:nth-child(even) { border-right: none; }
+    .stat:nth-last-child(-n+2) { border-bottom: none; }
+    .stat::before { display: none; }
+    .stat-num { font-size: 1.8rem; }
+
+    /* Grids */
+    .about-grid { grid-template-columns: 1fr; gap: 2rem; }
+    .skills-container { grid-template-columns: 1fr; }
+    .projects-grid { grid-template-columns: 1fr; }
+    .certs-grid { grid-template-columns: 1fr; }
+    .blog-grid { grid-template-columns: 1fr; }
+    .connect-grid { grid-template-columns: 1fr; }
     .form-row { grid-template-columns: 1fr; }
-    .hero-stats { gap: 2rem; }
-    nav { display: none; }
+
+    /* Experience timeline */
+    .timeline { padding-left: 1.5rem; }
+    .job { padding: 1.25rem; }
+    .job-header { flex-direction: column; gap: 0.5rem; }
+    .job-period { align-self: flex-start; }
+
+    /* Education */
+    .edu-card { flex-direction: column; gap: 1.25rem; padding: 1.5rem; }
+
+    /* Section titles */
+    h2.section-title { margin-bottom: 1.75rem; }
+  }
+
+  @media (max-width: 480px) {
+    .hero-name { font-size: clamp(2.8rem, 14vw, 4rem); letter-spacing: -1px; }
+    .hero-title { font-size: 0.95rem; }
+    .stat-num { font-size: 1.6rem; }
+    .stat-label { font-size: 0.6rem; letter-spacing: 1px; }
+    .stat { padding: 0.85rem 1rem; }
   }
 
   /* ── CHAT WIDGET ── */
