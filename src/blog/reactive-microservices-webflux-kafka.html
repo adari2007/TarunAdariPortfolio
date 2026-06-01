@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reactive Microservices: Spring WebFlux and Kafka at Scale — Tarun Adari</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/article.css">
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="../index.html">TA<span>.dev</span></a>
+  <a class="nav-back" href="../index.html#blog">← Back to Portfolio</a>
+</nav>
+
+<div class="article-hero">
+  <div class="article-hero-inner">
+    <div class="article-tag">Architecture</div>
+    <h1 class="article-title">Reactive Microservices: Spring WebFlux and Kafka at Scale</h1>
+    <div class="article-meta">
+      <span>📅 Feb 2026</span>
+      <span>⏱ 6 min read</span>
+      <span>✍ Tarun Adari</span>
+    </div>
+  </div>
+</div>
+
+<div class="article-body">
+  <a class="back-link" href="../index.html#blog">← All Articles</a>
+
+  <p>The <strong>Albertsons Cart &amp; Checkout platform</strong> processes millions of cart operations daily across 2,300+ stores. For years, our services were built on blocking Spring MVC — a model that worked until it didn't. As traffic grew and checkout latency became a competitive concern, we made the decision to migrate to a fully reactive stack built on <strong>Spring WebFlux</strong> and <strong>Kafka</strong>.</p>
+  <p>This is the story of that migration: the why, the how, and the things we got wrong before we got them right.</p>
+
+  <h2>The Problem with Blocking I/O at Scale</h2>
+  <p>Traditional Spring MVC uses a thread-per-request model. Each incoming HTTP request gets a thread from the pool, and that thread is blocked while waiting for database responses, downstream service calls, or Kafka message processing. At moderate traffic this is fine. At high traffic with multiple downstream dependencies per request, it becomes a bottleneck.</p>
+  <p>During peak grocery shopping hours — Friday evenings, Saturday mornings — our checkout services were exhausting thread pools. Requests queued. Latency spiked. We were throwing more hardware at a fundamentally inefficient model.</p>
+
+  <div class="callout">
+    <strong>The Core Problem</strong>
+    <p>In a blocking model, threads spend most of their time <em>waiting</em>, not computing. Reactive programming inverts this: a small number of event-loop threads handle many concurrent operations by never blocking — they register callbacks and move on.</p>
+  </div>
+
+  <h2>Choosing Spring WebFlux</h2>
+  <p>Spring WebFlux is Spring's reactive web framework, built on <strong>Project Reactor</strong> and Netty. It uses <span class="inline-code">Mono</span> (0 or 1 result) and <span class="inline-code">Flux</span> (0 to N results) as its core types, enabling non-blocking, backpressure-aware data streams.</p>
+  <p>We chose WebFlux over alternatives like Vert.x or Quarkus because our team had deep Spring expertise, and WebFlux is a natural evolution — many patterns map directly from MVC. The learning curve is real, but it's manageable.</p>
+
+  <pre class="code-block"><span class="comment">// Before: blocking Spring MVC controller</span>
+<span class="keyword">@GetMapping</span>(<span class="string">"/cart/{sessionId}"</span>)
+<span class="keyword">public</span> CartResponse getCart(<span class="keyword">@PathVariable</span> String sessionId) {
+    Cart cart = cartService.findBySession(sessionId); <span class="comment">// blocks thread</span>
+    Promotions promos = promoService.getForCart(cart); <span class="comment">// blocks again</span>
+    <span class="keyword">return</span> CartResponse.of(cart, promos);
+}
+
+<span class="comment">// After: reactive WebFlux controller</span>
+<span class="keyword">@GetMapping</span>(<span class="string">"/cart/{sessionId}"</span>)
+<span class="keyword">public</span> Mono&lt;CartResponse&gt; getCart(<span class="keyword">@PathVariable</span> String sessionId) {
+    <span class="keyword">return</span> cartService.findBySession(sessionId)
+        .zipWith(promoService.getForCart(sessionId))
+        .map(tuple -&gt; CartResponse.of(tuple.getT1(), tuple.getT2()));
+}</pre>
+
+  <p>The reactive version fetches the cart and promotions <strong>concurrently</strong> rather than sequentially — a meaningful latency improvement when both calls take ~50ms each.</p>
+
+  <h2>Kafka Integration: Event-Driven Checkout Flows</h2>
+  <p>Cart operations are inherently event-driven: item added, quantity changed, coupon applied, checkout initiated. We modeled each of these as Kafka events and built a reactive consumer pipeline using <strong>Spring Kafka</strong> with reactive Kafka bindings via <span class="inline-code">ReactorKafkaReceiver</span>.</p>
+
+  <pre class="code-block"><span class="keyword">@Bean</span>
+<span class="keyword">public</span> Flux&lt;ReceiverRecord&lt;String, CartEvent&gt;&gt; cartEventStream() {
+    ReceiverOptions&lt;String, CartEvent&gt; options = ReceiverOptions
+        .&lt;String, CartEvent&gt;create(consumerProps())
+        .subscription(Collections.singleton(<span class="string">"cart-events"</span>));
+    <span class="keyword">return</span> KafkaReceiver.create(options).receive()
+        .doOnNext(r -&gt; r.receiverOffset().acknowledge());
+}
+
+<span class="keyword">public</span> Flux&lt;CartState&gt; processEvents(Flux&lt;CartEvent&gt; events) {
+    <span class="keyword">return</span> events
+        .groupBy(CartEvent::getSessionId)
+        .flatMap(group -&gt; group.scan(CartState.empty(), CartState::apply))
+        .filter(CartState::isCheckoutReady);
+}</pre>
+
+  <h2>What We Got Wrong</h2>
+  <p>Reactive programming has sharp edges, and we hit most of them:</p>
+  <ul>
+    <li><strong>Blocking code in reactive chains.</strong> One <span class="inline-code">block()</span> call on a Netty event-loop thread deadlocks the application. We added Reactor's BlockHound to CI to catch this automatically.</li>
+    <li><strong>Error handling is different.</strong> Exceptions don't bubble up the same way. You need explicit <span class="inline-code">onErrorResume</span> and <span class="inline-code">onErrorReturn</span> operators throughout the chain.</li>
+    <li><strong>Debugging is harder.</strong> Stack traces in reactive code are notoriously unhelpful. We enabled <span class="inline-code">Hooks.onOperatorDebug()</span> in development and added structured logging with correlation IDs at each operator boundary.</li>
+    <li><strong>Not everything should be reactive.</strong> Simple CRUD services with low concurrency don't benefit much and pay the cognitive overhead cost. We kept some internal admin services on MVC.</li>
+  </ul>
+
+  <h2>Results</h2>
+  <p>After migrating the core cart read path and checkout initiation flow to WebFlux + reactive Kafka:</p>
+  <ul>
+    <li>Peak-hour thread pool exhaustion incidents: eliminated</li>
+    <li>Checkout service p99 latency: reduced significantly under load</li>
+    <li>Horizontal scaling efficiency improved — fewer pods handling more concurrent requests</li>
+    <li>Downstream service timeouts handled gracefully with fallbacks instead of cascading failures</li>
+  </ul>
+
+  <div class="takeaways">
+    <h3>Key Takeaways</h3>
+    <ul>
+      <li>Reactive is the right choice when you have high concurrency with I/O-bound operations and multiple downstream calls per request</li>
+      <li>Use <span class="inline-code">zipWith</span> and <span class="inline-code">zip</span> to fan out concurrent calls — sequential chaining defeats the purpose</li>
+      <li>Add BlockHound to your CI pipeline immediately — blocking in a reactive chain is the #1 production bug class</li>
+      <li>Invest in structured logging with correlation IDs; debugging reactive stack traces without them is painful</li>
+      <li>Not all services need to be reactive — apply it where concurrency and I/O pressure are real problems</li>
+    </ul>
+  </div>
+</div>
+
+<footer class="article-footer">
+  <p>Written by <span>Tarun Adari</span> · Senior Staff Software Engineer · <span>adari.tarun@gmail.com</span></p>
+</footer>
+
+</body>
+</html>

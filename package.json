@@ -1,0 +1,15 @@
+{
+  "name": "tarun-adari-portfolio",
+  "version": "1.0.0",
+  "description": "Tarun Adari's personal portfolio with AI chatbot",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.37.0",
+    "dotenv": "^17.4.2",
+    "express": "^4.19.0"
+  }
+}

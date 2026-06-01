@@ -1,0 +1,31 @@
+name: tarun-adari-portfolio
+
+services:
+  - name: web
+    type: web
+    instance_type: nano
+    regions:
+      - was
+    git:
+      repository: github.com/adari2007/TarunAdariPortfolio
+      branch: main
+    build:
+      buildpack:
+        build_command: npm install --production
+        run_command: node server.js
+    ports:
+      - port: 8000
+        protocol: http
+    env:
+      - key: NODE_ENV
+        value: production
+      - key: ANTHROPIC_API_KEY
+        secret: ANTHROPIC_API_KEY
+    health_checks:
+      - protocol: http
+        path: /
+        port: 8000
+        interval: 30
+        timeout: 5
+        grace_period: 10
+        restart_limit: 3

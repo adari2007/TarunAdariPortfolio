@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agentic Workflows: From Prompt to Production — Tarun Adari</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/article.css">
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="../index.html">TA<span>.dev</span></a>
+  <a class="nav-back" href="../index.html#blog">← Back to Portfolio</a>
+</nav>
+
+<div class="article-hero">
+  <div class="article-hero-inner">
+    <div class="article-tag">AI Engineering</div>
+    <h1 class="article-title">Agentic Workflows: From Prompt to Production</h1>
+    <div class="article-meta">
+      <span>📅 Jan 2026</span>
+      <span>⏱ 10 min read</span>
+      <span>✍ Tarun Adari</span>
+    </div>
+  </div>
+</div>
+
+<div class="article-body">
+  <a class="back-link" href="../index.html#blog">← All Articles</a>
+
+  <p>There's a big difference between an LLM that answers questions and an LLM agent that gets things done. The gap between a convincing demo and a reliable production system is where most enterprise AI projects stall. After deploying agentic workflows at <strong>Albertsons Companies</strong> — connecting Claude to internal tools, automating engineering tasks, and building document intelligence pipelines — I have a clear picture of what that gap looks like and how to close it.</p>
+
+  <h2>What Makes Something an Agent?</h2>
+  <p>An agent is an LLM that can take actions, observe results, and decide what to do next — in a loop. A chatbot responds to a single prompt. An agent can:</p>
+  <ul>
+    <li>Call a tool to fetch live data</li>
+    <li>Reason about the result and decide whether it needs more information</li>
+    <li>Chain multiple tool calls to complete a multi-step task</li>
+    <li>Handle failures and retry with different approaches</li>
+  </ul>
+  <p>The <strong>tool use</strong> capability is what enables this. Claude, like other frontier models, can be given structured tool definitions and will decide when and how to call them.</p>
+
+  <h2>Designing Tools That Agents Can Actually Use</h2>
+  <p>The quality of your tool definitions directly determines the quality of your agent's behavior. Vague descriptions produce vague tool usage. I follow these rules for every tool we build:</p>
+
+  <h3>1. One clear purpose per tool</h3>
+  <p>A tool called <span class="inline-code">get_order_info</span> that returns everything about an order is worse than separate tools for <span class="inline-code">get_order_status</span>, <span class="inline-code">get_order_items</span>, and <span class="inline-code">get_order_timeline</span>. Specific tools lead to specific, intentional tool calls.</p>
+
+  <h3>2. Write the description for the model, not for humans</h3>
+  <p>The description field is read by Claude to decide whether to use this tool. Write it as a complete sentence that explains exactly when this tool should be called and what it returns:</p>
+  <pre class="code-block"><span class="comment">// Bad description</span>
+<span class="string">"description"</span>: <span class="string">"Gets cart data"</span>
+
+<span class="comment">// Good description</span>
+<span class="string">"description"</span>: <span class="string">"Retrieves the current shopping cart for a user session,
+including item list, quantities, applied promotions, and estimated total.
+Call this when you need to understand what a customer currently has in their cart."</span></pre>
+
+  <h3>3. Make required vs optional fields explicit</h3>
+  <p>Always use the <span class="inline-code">required</span> array in your JSON schema. Ambiguous schemas produce unnecessary clarification loops where the agent asks for information it could reasonably default.</p>
+
+  <h2>Managing Context Windows in Long-Running Agents</h2>
+  <p>Context is finite. An agent that accumulates tool results indefinitely will eventually hit the context limit — often at the worst possible moment, mid-task. Our strategies:</p>
+  <ul>
+    <li><strong>Summarize tool results before returning them.</strong> Instead of returning a full 500-line JSON blob, post-process tool results to extract only what's relevant for the current step.</li>
+    <li><strong>Use a scratchpad pattern.</strong> Give the agent a dedicated memory tool it can write compressed state to and read back from, freeing the main context window.</li>
+    <li><strong>Implement sliding window history.</strong> For long conversations, keep the last N turns plus a compressed summary of earlier turns rather than the full history.</li>
+  </ul>
+
+  <div class="callout">
+    <strong>Rule of Thumb</strong>
+    <p>Measure the average token usage per agent run in production. If it's consistently above 60% of your context window, you have a context management problem waiting to surface at the worst time.</p>
+  </div>
+
+  <h2>Handling Failures Gracefully</h2>
+  <p>Agents will encounter tool failures. The API goes down. The query returns no results. The upstream service times out. How your agent handles these failures determines whether it's production-ready.</p>
+  <p>We implement three layers of failure handling:</p>
+  <ol>
+    <li><strong>Tool-level retry with exponential backoff.</strong> Transient failures (network timeouts, 503s) are retried automatically before the error is returned to the agent.</li>
+    <li><strong>Graceful error messages in tool responses.</strong> Instead of throwing exceptions that confuse the model, return structured error objects: <span class="inline-code">&#123;"error": "ORDER_NOT_FOUND", "message": "No order found for ID 12345"&#125;</span>. Claude handles these much better than raw error strings.</li>
+    <li><strong>Agent-level circuit breaking.</strong> If an agent has failed the same tool call 3 times, we surface a human escalation prompt rather than letting it spin indefinitely.</li>
+  </ol>
+
+  <h2>Human Oversight: Non-Negotiable in Enterprise</h2>
+  <p>Every agentic system we've deployed has a human oversight layer. The architecture:</p>
+  <ul>
+    <li><strong>Read operations:</strong> Fully autonomous. The agent can call any read tool without approval.</li>
+    <li><strong>Low-impact write operations:</strong> Auto-approved if confidence score &gt; 0.85 (we compute this based on task complexity and tool call consistency).</li>
+    <li><strong>High-impact write operations:</strong> Always routed to a human approval queue. The agent prepares a proposed action with reasoning, a human approves or rejects within a time window, and the agent proceeds accordingly.</li>
+  </ul>
+
+  <h2>Observability: The Difference Between Demo and Production</h2>
+  <p>You cannot operate agentic systems you cannot observe. Our observability stack for agents:</p>
+  <ul>
+    <li><strong>Structured trace logging</strong> for every tool call: input, output, latency, token count</li>
+    <li><strong>Splunk dashboards</strong> tracking agent success rates, average tool calls per run, and failure modes</li>
+    <li><strong>Alert thresholds</strong> on tool error rate, average run duration, and context window usage</li>
+    <li><strong>Session replay</strong> for failed runs — full tool call history stored in S3 for post-mortem analysis</li>
+  </ul>
+
+  <div class="takeaways">
+    <h3>Key Takeaways</h3>
+    <ul>
+      <li>Write tool descriptions for the model, not for humans — specificity in descriptions directly improves agent behavior</li>
+      <li>Actively manage context window consumption; summarize tool results before returning them to the agent</li>
+      <li>Return structured error objects from tools, not raw exceptions — Claude handles them far better</li>
+      <li>Implement a tiered oversight model: fully autonomous for reads, approval-gated for high-impact writes</li>
+      <li>Full observability (traces, dashboards, alerts) is the difference between a demo and a system you can operate on-call</li>
+    </ul>
+  </div>
+</div>
+
+<footer class="article-footer">
+  <p>Written by <span>Tarun Adari</span> · Senior Staff Software Engineer · <span>adari.tarun@gmail.com</span></p>
+</footer>
+
+</body>
+</html>

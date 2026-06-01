@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java 17 Migration: What Actually Changed in a Large Codebase — Tarun Adari</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/article.css">
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="../index.html">TA<span>.dev</span></a>
+  <a class="nav-back" href="../index.html#blog">← Back to Portfolio</a>
+</nav>
+
+<div class="article-hero">
+  <div class="article-hero-inner">
+    <div class="article-tag">Java</div>
+    <h1 class="article-title">Java 17 Migration: What Actually Changed in a Large Codebase</h1>
+    <div class="article-meta">
+      <span>📅 Nov 2025</span>
+      <span>⏱ 5 min read</span>
+      <span>✍ Tarun Adari</span>
+    </div>
+  </div>
+</div>
+
+<div class="article-body">
+  <a class="back-link" href="../index.html#blog">← All Articles</a>
+
+  <p>Migrating the <strong>Albertsons Cart &amp; Checkout</strong> platform from Java 11 to Java 17 was one of those projects that sounds straightforward until you're three weeks in and debugging a <span class="inline-code">InaccessibleObjectException</span> in a library you haven't touched in four years. Java 17 is a Long-Term Support release with genuinely useful language features — but it also brings strong encapsulation changes that will break things in ways the compiler won't warn you about.</p>
+  <p>Here's what actually mattered in a large Spring Boot microservices codebase.</p>
+
+  <h2>The Features Worth Using</h2>
+
+  <h3>Records (Java 16+)</h3>
+  <p>Records eliminate the boilerplate for immutable data carriers. We replaced dozens of DTO classes with records across our cart and checkout services:</p>
+  <pre class="code-block"><span class="comment">// Before: 40 lines of boilerplate</span>
+<span class="keyword">public class</span> CartItem {
+    <span class="keyword">private final</span> String productId;
+    <span class="keyword">private final</span> int quantity;
+    <span class="keyword">private final</span> BigDecimal price;
+    <span class="comment">// constructor, getters, equals, hashCode, toString...</span>
+}
+
+<span class="comment">// After: one line</span>
+<span class="keyword">public record</span> CartItem(String productId, <span class="keyword">int</span> quantity, BigDecimal price) {}</span></pre>
+  <p>One gotcha: records don't work with frameworks that require a no-arg constructor (some older Hibernate versions, certain Jackson configurations). Test your serialization layer thoroughly.</p>
+
+  <h3>Pattern Matching for instanceof</h3>
+  <p>No more redundant casts after an instanceof check:</p>
+  <pre class="code-block"><span class="comment">// Before</span>
+<span class="keyword">if</span> (event <span class="keyword">instanceof</span> CheckoutEvent) {
+    CheckoutEvent ce = (CheckoutEvent) event;
+    process(ce.getSessionId());
+}
+
+<span class="comment">// After</span>
+<span class="keyword">if</span> (event <span class="keyword">instanceof</span> CheckoutEvent ce) {
+    process(ce.getSessionId());
+}</pre>
+  <p>Small change, surprisingly satisfying to use throughout a large codebase. Our event processing code cleaned up noticeably.</p>
+
+  <h3>Sealed Classes</h3>
+  <p>Sealed classes let you declare a closed hierarchy — the compiler knows all subclasses and enforces exhaustiveness when switching. We used this for our cart event type hierarchy:</p>
+  <pre class="code-block"><span class="keyword">public sealed interface</span> CartEvent
+    <span class="keyword">permits</span> ItemAddedEvent, ItemRemovedEvent, CheckoutInitiatedEvent, CartAbandonedEvent {}
+
+<span class="comment">// Compiler now enforces all cases are handled</span>
+<span class="keyword">switch</span> (event) {
+    <span class="keyword">case</span> ItemAddedEvent e -&gt; handleAdd(e);
+    <span class="keyword">case</span> ItemRemovedEvent e -&gt; handleRemove(e);
+    <span class="keyword">case</span> CheckoutInitiatedEvent e -&gt; handleCheckout(e);
+    <span class="keyword">case</span> CartAbandonedEvent e -&gt; handleAbandoned(e);
+}</pre>
+
+  <h3>Text Blocks</h3>
+  <p>Multiline strings without escape hell. We use these extensively in test fixtures and SQL query constants:</p>
+  <pre class="code-block">String query = <span class="string">"""
+    SELECT c.session_id, c.items, c.updated_at
+    FROM carts c
+    WHERE c.store_id = :storeId
+      AND c.status = 'ACTIVE'
+      AND c.updated_at > :since
+    ORDER BY c.updated_at DESC
+    """</span>;</pre>
+
+  <h2>The Breaking Changes Nobody Warned You About</h2>
+
+  <h3>Strong Encapsulation of JDK Internals</h3>
+  <p>This is the big one. Java 17 enforces <strong>strong encapsulation</strong> for internal JDK APIs. Libraries that used reflection to access <span class="inline-code">sun.*</span> packages or internal fields will throw <span class="inline-code">InaccessibleObjectException</span> at runtime — not at compile time.</p>
+  <p>We hit this with:</p>
+  <ul>
+    <li><strong>Older Kryo serializers</strong> used in our Kafka message serialization layer</li>
+    <li><strong>Legacy ASM-based bytecode manipulation</strong> in an internal code generation library</li>
+    <li><strong>Mockito versions below 4.x</strong> — if you're still on Mockito 3.x, upgrade first</li>
+  </ul>
+  <p>Fix: add <span class="inline-code">--add-opens</span> JVM flags as a short-term workaround, then upgrade the offending libraries.</p>
+
+  <h3>Removed APIs</h3>
+  <p><span class="inline-code">Thread.stop()</span>, <span class="inline-code">Thread.suspend()</span>, and <span class="inline-code">Thread.resume()</span> are removed. We found one legacy integration service still calling <span class="inline-code">Thread.stop()</span> — it compiled fine on Java 11, silently failed to link on 17.</p>
+
+  <h2>Migration Strategy That Worked</h2>
+  <ol>
+    <li><strong>Run jdeps and jlink analysis</strong> to identify use of internal APIs before you touch the code</li>
+    <li><strong>Upgrade Spring Boot to 3.x first</strong> — it requires Java 17 and handles most framework-level compatibility</li>
+    <li><strong>Enable <span class="inline-code">--add-opens</span> broadly in CI</strong>, then tighten one module at a time as you fix root causes</li>
+    <li><strong>Migrate service by service</strong>, not all at once — one pod running Java 17 alongside Java 11 pods is fine in a microservices setup</li>
+    <li><strong>Run your full integration test suite</strong> with the new JVM before any prod deployment</li>
+  </ol>
+
+  <div class="takeaways">
+    <h3>Key Takeaways</h3>
+    <ul>
+      <li>Records, sealed classes, and pattern matching are genuinely useful — prioritize adopting them in new code</li>
+      <li>Strong encapsulation will break libraries using reflection against JDK internals; audit dependencies with jdeps before starting</li>
+      <li>Upgrade Mockito, Spring Boot, and serialization libraries before the JVM upgrade, not after</li>
+      <li>Migrate service by service in a microservices architecture — big-bang JVM upgrades across all services simultaneously are high risk</li>
+      <li>Runtime breakages won't surface at compile time — full integration test coverage is non-negotiable</li>
+    </ul>
+  </div>
+</div>
+
+<footer class="article-footer">
+  <p>Written by <span>Tarun Adari</span> · Senior Staff Software Engineer · <span>adari.tarun@gmail.com</span></p>
+</footer>
+
+</body>
+</html>

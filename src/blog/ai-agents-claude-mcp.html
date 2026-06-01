@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Building Production-Grade AI Agents with Claude and MCP Servers — Tarun Adari</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/article.css">
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="../index.html">TA<span>.dev</span></a>
+  <a class="nav-back" href="../index.html#blog">← Back to Portfolio</a>
+</nav>
+
+<div class="article-hero">
+  <div class="article-hero-inner">
+    <div class="article-tag">AI &amp; Agents</div>
+    <h1 class="article-title">Building Production-Grade AI Agents with Claude and MCP Servers</h1>
+    <div class="article-meta">
+      <span>📅 May 2026</span>
+      <span>⏱ 8 min read</span>
+      <span>✍ Tarun Adari</span>
+    </div>
+  </div>
+</div>
+
+<div class="article-body">
+  <a class="back-link" href="../index.html#blog">← All Articles</a>
+
+  <p>When my team at <strong>Albertsons Companies</strong> first started integrating large language models into our Cart &amp; Checkout platform, we quickly realized that simple API calls to Claude weren't enough. We needed agents — systems that could reason, use tools, and act autonomously across our internal services. That journey led us to the <strong>Model Context Protocol (MCP)</strong>, and it fundamentally changed how we think about AI in enterprise engineering.</p>
+  <p>This article shares real lessons from integrating Claude with MCP servers into a production e-commerce platform serving <strong>2,300+ Albertsons and Safeway stores</strong>.</p>
+
+  <h2>What is MCP and Why Does It Matter?</h2>
+  <p>The <strong>Model Context Protocol</strong> is an open standard that defines how AI models connect to external tools, databases, and APIs in a secure, structured way. Think of it as a USB standard for AI — instead of writing bespoke integrations for every LLM and every tool, MCP gives you a universal connector.</p>
+  <p>Before MCP, our integrations looked like this: hardcoded API wrappers, brittle prompt templates, and no standard way to handle tool responses. With MCP, we define tools once with a clear schema, and Claude knows exactly how to invoke them and interpret results.</p>
+
+  <div class="callout">
+    <strong>Key Insight</strong>
+    <p>MCP separates the <em>what</em> (tool definitions and schemas) from the <em>how</em> (the LLM reasoning about when and how to use them). This makes agents composable and testable independently of the model.</p>
+  </div>
+
+  <h2>Architecture: How We Wired Claude into Our Platform</h2>
+  <p>Our MCP setup at Albertsons consists of three layers:</p>
+  <ul>
+    <li><strong>MCP Host:</strong> The process running Claude and managing tool calls — in our case, a Spring Boot microservice</li>
+    <li><strong>MCP Servers:</strong> Lightweight Node.js or Java services exposing tools like cart lookup, pricing APIs, and order status</li>
+    <li><strong>Transport Layer:</strong> stdio for local tools, HTTP/SSE for remote services behind our API gateway</li>
+  </ul>
+
+  <p>Here's a simplified version of how a tool definition looks in our cart MCP server:</p>
+  <pre class="code-block"><span class="comment">// cart-mcp-server/tools/getCartSummary.js</span>
+{
+  <span class="string">"name"</span>: <span class="string">"get_cart_summary"</span>,
+  <span class="string">"description"</span>: <span class="string">"Retrieves the current cart for a given user session including items, prices, and promotions"</span>,
+  <span class="string">"inputSchema"</span>: {
+    <span class="string">"type"</span>: <span class="string">"object"</span>,
+    <span class="string">"properties"</span>: {
+      <span class="string">"sessionId"</span>: { <span class="string">"type"</span>: <span class="string">"string"</span>, <span class="string">"description"</span>: <span class="string">"User session identifier"</span> },
+      <span class="string">"storeId"</span>: { <span class="string">"type"</span>: <span class="string">"string"</span>, <span class="string">"description"</span>: <span class="string">"Store location identifier"</span> }
+    },
+    <span class="string">"required"</span>: [<span class="string">"sessionId"</span>]
+  }
+}</pre>
+
+  <h2>Real Use Cases: What the Agent Actually Does</h2>
+  <p>Once we had the MCP infrastructure in place, we built several agent workflows that run in production:</p>
+
+  <h3>1. Checkout Anomaly Detection</h3>
+  <p>An agent monitors checkout sessions in real time. When it detects anomalies — a cart that's been idle for 45 minutes with high-value items, or a promo code being attempted more than 3 times — it uses MCP tools to pull the session state, check the customer's history, and decide whether to trigger a recovery flow or flag for review. What used to be a set of brittle rule-based scripts is now a single agent with clear reasoning.</p>
+
+  <h3>2. Document Analysis Pipeline</h3>
+  <p>Our architecture decision records, runbooks, and incident reports are PDFs scattered across Confluence. We built an MCP server that exposes document search and retrieval, and Claude can now answer questions like "What was the resolution for the checkout timeout incident in March?" with cited sources. This alone saved hours per week across the team.</p>
+
+  <h3>3. Engineering Task Automation</h3>
+  <p>Using MCP tools connected to our Jira and GitHub APIs, Claude can triage incoming tickets, suggest assignees based on past work patterns, draft PR descriptions from commit history, and even generate boilerplate for new microservice scaffolding.</p>
+
+  <h2>Production Considerations</h2>
+  <p>Getting agents to demo is easy. Getting them to behave reliably in production is hard. Here's what we learned:</p>
+  <ul>
+    <li><strong>Tool schemas are contracts.</strong> Treat them like API contracts — version them, document them, and don't break them silently.</li>
+    <li><strong>Always cap tool call chains.</strong> Set a maximum number of sequential tool calls per agent turn (we use 10). Unbounded loops are real.</li>
+    <li><strong>Log every tool invocation.</strong> Pipe all MCP tool calls and results to Splunk. When something goes wrong, you need the full trace.</li>
+    <li><strong>Human oversight is non-negotiable for write operations.</strong> Our agents read freely but write (update cart, trigger refund) only after a confidence threshold check and, for high-value operations, a human approval queue.</li>
+    <li><strong>Test tools independently.</strong> Unit test your MCP tool handlers before wiring them to Claude. A broken tool produces confusing agent behavior that's hard to debug.</li>
+  </ul>
+
+  <div class="callout">
+    <strong>Lesson Learned</strong>
+    <p>The hardest bugs in agentic systems aren't code bugs — they're reasoning bugs. Claude might use a tool correctly but misinterpret the result. Add assertion steps after critical tool calls to validate the agent's understanding before it proceeds.</p>
+  </div>
+
+  <h2>Measuring Impact</h2>
+  <p>Since deploying these agent workflows, we've seen measurable improvements: engineering toil on repetitive documentation tasks has dropped significantly, our checkout anomaly detection catches edge cases our rule-based system missed, and onboarding new engineers has accelerated because the agent can answer "how does X work in our system?" directly from our internal docs.</p>
+
+  <div class="takeaways">
+    <h3>Key Takeaways</h3>
+    <ul>
+      <li>MCP provides a standard, composable way to connect Claude to your internal systems — invest in solid tool schemas upfront</li>
+      <li>Start with read-only agent workflows; add write operations only with confidence thresholds and audit logging</li>
+      <li>Instrument everything — full tracing of tool calls is essential for debugging reasoning failures</li>
+      <li>The biggest gains come from replacing brittle rule-based automation, not from replacing human judgment</li>
+      <li>Test your MCP tools as standalone units before integrating with the LLM</li>
+    </ul>
+  </div>
+</div>
+
+<footer class="article-footer">
+  <p>Written by <span>Tarun Adari</span> · Senior Staff Software Engineer · <span>adari.tarun@gmail.com</span></p>
+</footer>
+
+</body>
+</html>

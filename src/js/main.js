@@ -120,21 +120,24 @@
   btn.textContent = '↑';
   btn.setAttribute('aria-label', 'Back to top');
   btn.style.cssText = `
-    position: fixed; bottom: 2rem; right: 2rem;
-    width: 44px; height: 44px;
-    background: var(--neon); color: #000;
-    border: none; cursor: pointer;
-    font-size: 1.1rem; font-weight: 700;
-    opacity: 0; transition: opacity 0.3s, transform 0.3s;
-    z-index: 99;
-    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    position: fixed; bottom: 2rem; right: calc(2rem + 52px + 1rem);
+    width: 52px; height: 52px;
+    background: var(--bg2); color: var(--neon);
+    border: 1px solid var(--border); cursor: pointer;
+    font-size: 1.2rem; font-weight: 700;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+    z-index: 501;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
   `;
 
   document.body.appendChild(btn);
 
   window.addEventListener('scroll', () => {
-    btn.style.opacity = window.scrollY > 600 ? '1' : '0';
-    btn.style.transform = window.scrollY > 600 ? 'translateY(0)' : 'translateY(10px)';
+    const visible = window.scrollY > 600;
+    btn.style.opacity = visible ? '1' : '0';
+    btn.style.transform = visible ? 'translateY(0)' : 'translateY(10px)';
+    btn.style.pointerEvents = visible ? 'auto' : 'none';
   });
 
   btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
@@ -165,3 +168,111 @@ function showToast(message, type = 'success') {
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+
+/* ── Chatbot ── */
+(function initChatbot() {
+  const toggle   = document.getElementById('chat-toggle');
+  const panel    = document.getElementById('chat-panel');
+  const closeBtn = document.getElementById('chat-close');
+  const input    = document.getElementById('chat-input');
+  const sendBtn  = document.getElementById('chat-send');
+  const messages = document.getElementById('chat-messages');
+  const iconOpen  = document.getElementById('chat-icon-open');
+  const iconClose = document.getElementById('chat-icon-close');
+  if (!toggle) return;
+
+  const history = [];
+  let isOpen = false;
+
+  function openChat() {
+    isOpen = true;
+    panel.setAttribute('aria-hidden', 'false');
+    iconOpen.style.display  = 'none';
+    iconClose.style.display = 'block';
+    input.focus();
+  }
+
+  function closeChat() {
+    isOpen = false;
+    panel.setAttribute('aria-hidden', 'true');
+    iconOpen.style.display  = 'block';
+    iconClose.style.display = 'none';
+  }
+
+  toggle.addEventListener('click', () => isOpen ? closeChat() : openChat());
+  closeBtn.addEventListener('click', closeChat);
+
+  const heroBtn = document.getElementById('hero-chat-btn');
+  if (heroBtn) heroBtn.addEventListener('click', openChat);
+
+  function formatMarkdown(text) {
+    return text
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|\n)(- .+)(\n- .+)*/g, (block) => {
+        const items = block.trim().split('\n').map(l => `<li>${l.replace(/^- /, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>`).join('');
+        return `<ul>${items}</ul>`;
+      })
+      .replace(/\n\n/g, '<br><br>')
+      .replace(/\n/g, '<br>');
+  }
+
+  function appendMessage(role, text) {
+    const wrapper = document.createElement('div');
+    wrapper.className = `chat-msg ${role}`;
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+    if (role === 'bot') {
+      bubble.innerHTML = formatMarkdown(text);
+    } else {
+      bubble.textContent = text;
+    }
+    wrapper.appendChild(bubble);
+    messages.appendChild(wrapper);
+    messages.scrollTop = messages.scrollHeight;
+    return wrapper;
+  }
+
+  function appendTyping() {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'chat-msg bot chat-typing';
+    wrapper.innerHTML = '<div class="chat-bubble"><span></span><span></span><span></span></div>';
+    messages.appendChild(wrapper);
+    messages.scrollTop = messages.scrollHeight;
+    return wrapper;
+  }
+
+  async function sendMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    sendBtn.disabled = true;
+    appendMessage('user', text);
+    history.push({ role: 'user', content: text });
+
+    const typing = appendTyping();
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history }),
+      });
+      const data = await res.json();
+      const reply = data.content || data.error || 'Sorry, something went wrong.';
+      typing.remove();
+      appendMessage('bot', reply);
+      history.push({ role: 'assistant', content: reply });
+    } catch {
+      typing.remove();
+      appendMessage('bot', 'Connection error. Please try again.');
+    } finally {
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  }
+
+  sendBtn.addEventListener('click', sendMessage);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+})();

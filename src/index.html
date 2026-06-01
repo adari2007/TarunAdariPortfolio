@@ -44,8 +44,12 @@
     Building enterprise-grade distributed systems, microservices, and AI-powered solutions. Currently leading Cart &amp; Checkout engineering at Albertsons Companies — integrating Claude, MCP servers, and autonomous AI agents into modern e-commerce platforms.
   </p>
   <div class="hero-actions">
-    <a href="#experience" class="btn-primary">View Experience →</a>
-    <a href="#contact" class="btn-secondary">Get In Touch</a>
+    <a href="#experience" class="btn-dark">View Experience →</a>
+    <a href="#connect" class="btn-outline">Get In Touch</a>
+    <button class="btn-ai" id="hero-chat-btn" type="button">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Ask My AI
+    </button>
   </div>
   <div class="hero-stats">
     <div class="stat">
@@ -625,6 +629,20 @@
         <div class="cert-issuer">Splunk Inc.</div>
       </div>
     </div>
+    <div class="cert-card">
+      <div class="cert-icon">🗄️</div>
+      <div>
+        <div class="cert-name">Apache Cassandra Certified Developer</div>
+        <div class="cert-issuer">DataStax / Apache Software Foundation</div>
+      </div>
+    </div>
+    <div class="cert-card">
+      <div class="cert-icon">📨</div>
+      <div>
+        <div class="cert-name">Confluent Certified Developer for Apache Kafka</div>
+        <div class="cert-issuer">Confluent</div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -653,7 +671,7 @@
       <div class="blog-title">Building Production-Grade AI Agents with Claude and MCP Servers</div>
       <p class="blog-excerpt">A deep dive into Model Context Protocol — how MCP enables AI agents to connect securely to enterprise tools, databases, and APIs. Real lessons from integrating Claude into Albertsons' engineering workflows.</p>
       <div class="blog-meta">May 2026 · 8 min read</div>
-      <a class="blog-read-more" href="#">Read Article →</a>
+      <a class="blog-read-more" href="blog/ai-agents-claude-mcp.html">Read Article →</a>
     </div>
 
     <div class="blog-card">
@@ -661,7 +679,7 @@
       <div class="blog-title">Reactive Microservices: Spring WebFlux and Kafka at Scale</div>
       <p class="blog-excerpt">How we refactored Albertsons' Cart &amp; Checkout from blocking Spring MVC to fully reactive Spring WebFlux — handling millions of daily cart operations with dramatically improved latency and resilience.</p>
       <div class="blog-meta">Feb 2026 · 6 min read</div>
-      <a class="blog-read-more" href="#">Read Article →</a>
+      <a class="blog-read-more" href="blog/reactive-microservices-webflux-kafka.html">Read Article →</a>
     </div>
 
     <div class="blog-card">
@@ -669,7 +687,7 @@
       <div class="blog-title">Agentic Workflows: From Prompt to Production</div>
       <p class="blog-excerpt">Lessons learned deploying LLM-powered agents in enterprise environments — designing tool schemas, managing context windows, handling failures gracefully, and maintaining human oversight in agentic pipelines.</p>
       <div class="blog-meta">Jan 2026 · 10 min read</div>
-      <a class="blog-read-more" href="#">Read Article →</a>
+      <a class="blog-read-more" href="blog/agentic-workflows-prompt-to-production.html">Read Article →</a>
     </div>
 
     <div class="blog-card">
@@ -677,7 +695,7 @@
       <div class="blog-title">Java 17 Migration: What Actually Changed in a Large Codebase</div>
       <p class="blog-excerpt">Practical notes from migrating a large enterprise Spring Boot codebase from Java 11 to Java 17 — sealed classes, pattern matching, record types, and the subtle breaking changes nobody warns you about.</p>
       <div class="blog-meta">Nov 2025 · 5 min read</div>
-      <a class="blog-read-more" href="#">Read Article →</a>
+      <a class="blog-read-more" href="blog/java17-migration.html">Read Article →</a>
     </div>
 
     <div class="blog-card">
@@ -685,7 +703,7 @@
       <div class="blog-title">Shipping a React Native App to the App Store with Fastlane</div>
       <p class="blog-excerpt">A step-by-step guide on setting up Fastlane for iOS distribution — CSR generation, Apple Distribution certificates, provisioning profiles, and the Fastfile configuration that finally made it work.</p>
       <div class="blog-meta">Sep 2025 · 7 min read</div>
-      <a class="blog-read-more" href="#">Read Article →</a>
+      <a class="blog-read-more" href="blog/react-native-app-store-fastlane.html">Read Article →</a>
     </div>
 
     <div class="blog-card">
@@ -693,7 +711,7 @@
       <div class="blog-title">Inside Manhattan EOM: Order Orchestration Patterns That Scale</div>
       <p class="blog-excerpt">Drawing from 5+ years in supply chain engineering — the architectural patterns behind Manhattan EOM that help global retailers orchestrate millions of orders across distributed fulfillment networks.</p>
       <div class="blog-meta">Jul 2025 · 9 min read</div>
-      <a class="blog-read-more" href="#">Read Article →</a>
+      <a class="blog-read-more" href="blog/manhattan-eom-order-orchestration.html">Read Article →</a>
     </div>
 
   </div>
@@ -747,6 +765,37 @@
   <p>Built by <span>Tarun Adari</span> · Senior Staff Software Engineer · <span>adari.tarun@gmail.com</span></p>
   <p style="margin-top:0.5rem; opacity:0.5;">Plano, TX · Java · AI Agents · MCP · Cloud · 2026</p>
 </footer>
+
+<!-- CHAT WIDGET -->
+<div id="chat-widget">
+  <div id="chat-panel" aria-hidden="true">
+    <div id="chat-header">
+      <div class="chat-header-info">
+        <div class="chat-avatar">TA</div>
+        <div>
+          <div class="chat-name">Tarun's Assistant</div>
+          <div class="chat-status"><span class="chat-dot"></span>Ask me anything</div>
+        </div>
+      </div>
+      <button id="chat-close" aria-label="Close chat">✕</button>
+    </div>
+    <div id="chat-messages">
+      <div class="chat-msg bot">
+        <div class="chat-bubble">Hi! I'm Tarun's AI assistant. Ask me about his experience, skills, projects, or anything on this portfolio.</div>
+      </div>
+    </div>
+    <div id="chat-input-area">
+      <input id="chat-input" type="text" placeholder="Ask a question…" autocomplete="off" />
+      <button id="chat-send" aria-label="Send">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+  <button id="chat-toggle" aria-label="Open assistant">
+    <svg id="chat-icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <svg id="chat-icon-close" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+</div>
 
 <script src="js/main.js"></script>
 </body>

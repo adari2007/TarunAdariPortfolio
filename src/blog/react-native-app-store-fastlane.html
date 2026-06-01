@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shipping a React Native App to the App Store with Fastlane — Tarun Adari</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/article.css">
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="../index.html">TA<span>.dev</span></a>
+  <a class="nav-back" href="../index.html#blog">← Back to Portfolio</a>
+</nav>
+
+<div class="article-hero">
+  <div class="article-hero-inner">
+    <div class="article-tag">Mobile</div>
+    <h1 class="article-title">Shipping a React Native App to the App Store with Fastlane</h1>
+    <div class="article-meta">
+      <span>📅 Sep 2025</span>
+      <span>⏱ 7 min read</span>
+      <span>✍ Tarun Adari</span>
+    </div>
+  </div>
+</div>
+
+<div class="article-body">
+  <a class="back-link" href="../index.html#blog">← All Articles</a>
+
+  <p>Shipping <strong>RummyScoreKeeper</strong> to the Apple App Store taught me more about iOS code signing in one week than I'd learned in years of backend engineering. The combination of provisioning profiles, distribution certificates, entitlements, and App Store Connect can feel deliberately hostile to anyone who isn't already initiated. This guide is the article I wish I'd had — a complete walkthrough from zero to App Store submission using <strong>Fastlane</strong>.</p>
+
+  <h2>What You'll Need Before Starting</h2>
+  <ul>
+    <li>An <strong>Apple Developer Program</strong> membership ($99/year — required for App Store distribution)</li>
+    <li>A Mac with Xcode installed (latest stable version)</li>
+    <li>Your React Native project building successfully in Xcode</li>
+    <li>Ruby installed (Fastlane runs on Ruby)</li>
+  </ul>
+
+  <h2>Step 1: Generate Your Certificate Signing Request (CSR)</h2>
+  <p>A CSR proves to Apple that you own the private key associated with your certificate. Generate it on your Mac:</p>
+  <pre class="code-block"><span class="comment"># Open Keychain Access → Certificate Assistant → Request a Certificate From a Certificate Authority</span>
+<span class="comment"># Fill in your email, select "Saved to disk", and save as CertificateSigningRequest.certSigningRequest</span>
+
+<span class="comment"># Alternatively, via command line:</span>
+openssl genrsa -out distribution.key 2048
+openssl req -new -key distribution.key -out distribution.csr \
+  -subj <span class="string">"/emailAddress=your@email.com/CN=Tarun Adari/C=US"</span></pre>
+
+  <div class="callout">
+    <strong>Important</strong>
+    <p>Keep your private key (<span class="inline-code">distribution.key</span>) secure. If you lose it, you'll need to revoke and regenerate your certificate. Store it in a secure location — I use an encrypted disk image.</p>
+  </div>
+
+  <h2>Step 2: Create Your Distribution Certificate</h2>
+  <ol>
+    <li>Go to <strong>developer.apple.com → Certificates, IDs &amp; Profiles → Certificates</strong></li>
+    <li>Click the <strong>+</strong> button, select <strong>Apple Distribution</strong></li>
+    <li>Upload your CSR file</li>
+    <li>Download the resulting <span class="inline-code">.cer</span> file and double-click to install it in Keychain</li>
+  </ol>
+  <p>You now have a Distribution certificate in your Keychain, linked to the private key you generated. Verify: open Keychain Access, find "Apple Distribution: Your Name" — it should show a disclosure triangle with the private key beneath it. If there's no private key, the certificate is useless on this machine.</p>
+
+  <h2>Step 3: Create an App ID and Provisioning Profile</h2>
+  <p>An <strong>App ID</strong> uniquely identifies your app (e.g., <span class="inline-code">com.tarunadari.rummyscorekeeper</span>). A <strong>Provisioning Profile</strong> ties together your App ID, your distribution certificate, and your developer account into a signed bundle that Apple accepts.</p>
+  <pre class="code-block"><span class="comment"># In developer.apple.com:</span>
+<span class="comment"># 1. Identifiers → Register App ID → set bundle ID to match your React Native project</span>
+<span class="comment"># 2. Profiles → New Profile → App Store → select your App ID → select your certificate</span>
+<span class="comment"># 3. Download the .mobileprovision file</span></pre>
+
+  <h2>Step 4: Install and Configure Fastlane</h2>
+  <pre class="code-block"><span class="comment"># Install Fastlane</span>
+gem install fastlane
+
+<span class="comment"># From your project root</span>
+cd ios && fastlane init</pre>
+
+  <p>Fastlane will ask a few questions and create a <span class="inline-code">fastlane/</span> directory with an <span class="inline-code">Appfile</span> and <span class="inline-code">Fastfile</span>. Configure the Appfile first:</p>
+  <pre class="code-block"><span class="comment"># fastlane/Appfile</span>
+app_identifier(<span class="string">"com.tarunadari.rummyscorekeeper"</span>)
+apple_id(<span class="string">"your-apple-id@email.com"</span>)
+team_id(<span class="string">"YOUR_TEAM_ID"</span>) <span class="comment"># Found in developer.apple.com → Membership</span></pre>
+
+  <h2>Step 5: Write the Fastfile</h2>
+  <p>This is where the magic happens. The <span class="inline-code">Fastfile</span> defines your distribution lane — the exact sequence of steps to build and submit your app:</p>
+  <pre class="code-block"><span class="comment"># fastlane/Fastfile</span>
+default_platform(:ios)
+
+platform :ios <span class="keyword">do</span>
+  lane :release <span class="keyword">do</span>
+    <span class="comment"># Ensure the version and build number are set</span>
+    increment_build_number(xcodeproj: <span class="string">"RummyScoreKeeper.xcodeproj"</span>)
+
+    <span class="comment"># Build the app with manual signing</span>
+    build_app(
+      workspace: <span class="string">"RummyScoreKeeper.xcworkspace"</span>,
+      scheme: <span class="string">"RummyScoreKeeper"</span>,
+      configuration: <span class="string">"Release"</span>,
+      export_method: <span class="string">"app-store"</span>,
+      export_options: {
+        provisioningProfiles: {
+          <span class="string">"com.tarunadari.rummyscorekeeper"</span> =&gt; <span class="string">"RummyScoreKeeper AppStore"</span>
+        }
+      }
+    )
+
+    <span class="comment"># Upload to App Store Connect</span>
+    upload_to_app_store(
+      skip_metadata: <span class="keyword">true</span>,
+      skip_screenshots: <span class="keyword">true</span>,
+      submit_for_review: <span class="keyword">false</span> <span class="comment"># Set true when ready to submit</span>
+    )
+  <span class="keyword">end</span>
+<span class="keyword">end</span></pre>
+
+  <h2>Common Gotchas</h2>
+  <ul>
+    <li><strong>"No provisioning profile" error:</strong> The profile name in <span class="inline-code">export_options</span> must exactly match what's in Xcode's signing settings, including spacing.</li>
+    <li><strong>Keychain not found in CI:</strong> If running on a CI machine, you need to create a temporary keychain and import your certificate before building. Fastlane's <span class="inline-code">setup_ci</span> action handles this.</li>
+    <li><strong>Build number must increment:</strong> App Store Connect rejects uploads with the same build number. Automate this with <span class="inline-code">increment_build_number</span> or you'll manually forget.</li>
+    <li><strong>React Native metro cache:</strong> Always clear the metro cache (<span class="inline-code">npx react-native start --reset-cache</span>) before a release build. Stale cache produces mysterious JS bundle errors.</li>
+  </ul>
+
+  <div class="takeaways">
+    <h3>Key Takeaways</h3>
+    <ul>
+      <li>The CSR private key and your Distribution certificate are a matched pair — if you lose the key, you must revoke and regenerate the certificate</li>
+      <li>The provisioning profile name in your Fastfile export options must exactly match what Xcode sees — case-sensitive, space-sensitive</li>
+      <li>Always automate build number increments — manual incrementing will cause a failed upload at the worst time</li>
+      <li>Clear React Native metro cache before every release build to avoid stale bundle issues</li>
+      <li>Use <span class="inline-code">submit_for_review: false</span> initially so you can review the TestFlight build before submitting to review</li>
+    </ul>
+  </div>
+</div>
+
+<footer class="article-footer">
+  <p>Written by <span>Tarun Adari</span> · Senior Staff Software Engineer · <span>adari.tarun@gmail.com</span></p>
+</footer>
+
+</body>
+</html>

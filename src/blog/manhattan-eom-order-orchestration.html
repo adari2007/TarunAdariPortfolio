@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inside Manhattan EOM: Order Orchestration Patterns That Scale — Tarun Adari</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/article.css">
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="../index.html">TA<span>.dev</span></a>
+  <a class="nav-back" href="../index.html#blog">← Back to Portfolio</a>
+</nav>
+
+<div class="article-hero">
+  <div class="article-hero-inner">
+    <div class="article-tag">Supply Chain</div>
+    <h1 class="article-title">Inside Manhattan EOM: Order Orchestration Patterns That Scale</h1>
+    <div class="article-meta">
+      <span>📅 Jul 2025</span>
+      <span>⏱ 9 min read</span>
+      <span>✍ Tarun Adari</span>
+    </div>
+  </div>
+</div>
+
+<div class="article-body">
+  <a class="back-link" href="../index.html#blog">← All Articles</a>
+
+  <p>During my time at <strong>Manhattan Associates</strong> as a Senior Java Developer on the Enterprise Order Management (EOM) platform, I worked on OMS systems deployed at global retailers managing millions of orders across distributed fulfillment networks. EOM is a sophisticated engine — it sits at the center of the retail supply chain, routing orders to the right fulfillment location, managing inventory reservations, coordinating payment processing, and orchestrating the handoff to warehouses and carriers.</p>
+  <p>This article shares the architectural patterns that make large-scale order orchestration reliable, and what breaks when those patterns are ignored.</p>
+
+  <h2>The Core Problem: Orders Are Distributed Transactions</h2>
+  <p>An order touches many systems: inventory reservation, payment authorization, fulfillment routing, warehouse management, and carrier selection. Each step can fail. The challenge of an OMS is making this sequence of operations appear atomic to the customer while remaining resilient to partial failures in the backend.</p>
+  <p>Manhattan EOM addresses this with a <strong>saga pattern</strong> — each order progresses through a defined state machine, with compensating transactions ready for each forward step in case of failure.</p>
+
+  <h2>Order Routing: The Intelligence Layer</h2>
+  <p>The most business-critical decision an OMS makes is <strong>where to fulfill an order from</strong>. This is the order routing engine. At Manhattan Associates, we configured routing rules across several dimensions:</p>
+  <ul>
+    <li><strong>Inventory proximity:</strong> Prefer fulfillment nodes closest to the customer's ship-to address to minimize carrier cost and delivery time</li>
+    <li><strong>Inventory availability:</strong> Check ATP (Available To Promise) quantities that account for safety stock, pending orders, and in-transit replenishment</li>
+    <li><strong>Node capacity:</strong> Avoid routing to fulfillment centers already at throughput limits for the day</li>
+    <li><strong>Item restrictions:</strong> Some items can only ship from specific nodes (hazmat, refrigerated, oversized)</li>
+    <li><strong>Split order economics:</strong> Determine whether splitting an order across two nodes is cheaper than shipping complete from a single distant node</li>
+  </ul>
+
+  <div class="callout">
+    <strong>Key Insight</strong>
+    <p>Order routing is an optimization problem. There's rarely a single "correct" answer — there are tradeoffs between speed, cost, and customer experience. Make your routing rules explicit and configurable; hard-coded routing logic becomes unmaintainable the moment business requirements change.</p>
+  </div>
+
+  <h2>Inventory Reservation: The Hardest Part</h2>
+  <p>Inventory is shared across all sales channels — online, in-store, mobile, third-party marketplaces. The OMS must reserve inventory at order placement without creating oversell situations. We used a <strong>soft reservation / hard reservation</strong> model:</p>
+  <ul>
+    <li><strong>Soft reservation:</strong> Applied at cart checkout — reduces ATP quantity for other orders to see, but doesn't write to the warehouse system yet. Expires after a timeout if payment fails.</li>
+    <li><strong>Hard reservation:</strong> Applied when payment is captured — writes to the warehouse management system and creates a pick task. This is the point of no return for inventory.</li>
+  </ul>
+  <p>The critical implementation detail: soft reservations must be <strong>idempotent</strong>. Network timeouts during the reservation call can cause the client to retry. Without idempotency, you'll double-reserve inventory and confuse your warehouse team.</p>
+
+  <h2>Payment Integration: CyberSource and PayPal Patterns</h2>
+  <p>I built the CyberSource and PayPal integrations at Manhattan through their Manhattan Integration Frameworks (MIF). The key design decision: <strong>never capture payment before confirming fulfillment capacity</strong>.</p>
+  <p>Our payment flow:</p>
+  <ol>
+    <li><strong>Authorization at order placement</strong> — holds funds, doesn't charge</li>
+    <li><strong>Inventory routing and reservation</strong> — confirm we can fulfill</li>
+    <li><strong>Capture at shipment</strong> — charge the customer only when the item is physically picked up by the carrier</li>
+  </ol>
+  <p>This is the industry-standard approach and for good reason: it protects customers from being charged for items you can't actually ship, and it gives you a natural cancellation window without refund complexity.</p>
+
+  <h2>Performance at Scale: JProfiler and AWR Reports</h2>
+  <p>EOM runs batch processes nightly: order wave planning, inventory reconciliation, shipment confirmation ingestion. These jobs process millions of records and performance is critical. Our tuning stack:</p>
+  <ul>
+    <li><strong>JProfiler</strong> for CPU and memory hotspot analysis — identified N+1 query patterns in the order line item processing that were killing batch throughput</li>
+    <li><strong>Thread dumps</strong> during production hangs revealed lock contention in our concurrent order status update logic</li>
+    <li><strong>AWR Reports</strong> (Oracle Automatic Workload Repository) for database-level analysis — the top SQL by elapsed time report is invaluable for finding slow queries before they become incidents</li>
+    <li><strong>GC tuning</strong> — large batch jobs benefit from G1GC with explicit region sizes tuned to your working set</li>
+  </ul>
+
+  <h2>Multi-Channel Complexity</h2>
+  <p>The hardest configuration challenge in EOM is supporting multiple channels — each with different business rules — through a single order pipeline. A wholesale order has different payment terms than a direct-to-consumer order. A marketplace order has different SLA requirements than an in-store pickup order. We handled this through <strong>order type configuration</strong>: a hierarchy of properties that cascade from channel type to order type to individual fulfillment instructions, with overrides at each level.</p>
+
+  <div class="takeaways">
+    <h3>Key Takeaways</h3>
+    <ul>
+      <li>Model orders as sagas with compensating transactions — partial failures are the norm, not the exception, in distributed fulfillment</li>
+      <li>Make routing rules explicit, configurable, and testable — hard-coded routing logic will need to change the moment it's in production</li>
+      <li>Use soft-then-hard reservation patterns to prevent oversell without blocking inventory unnecessarily</li>
+      <li>Capture payment at shipment, not at order placement — it simplifies cancellations and protects customers</li>
+      <li>AWR Reports and JProfiler together cover 80% of OMS performance problems; learn to read both before your first production performance incident</li>
+    </ul>
+  </div>
+</div>
+
+<footer class="article-footer">
+  <p>Written by <span>Tarun Adari</span> · Senior Staff Software Engineer · <span>adari.tarun@gmail.com</span></p>
+</footer>
+
+</body>
+</html>
