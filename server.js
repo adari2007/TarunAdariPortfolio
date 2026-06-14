@@ -27,7 +27,7 @@ Title: Senior Staff Software Engineer
 Location: Plano, TX, USA
 Email: adari.tarun@gmail.com
 Phone: 610-427-1437
-LinkedIn: linkedin.com/in/tarunadari
+LinkedIn: linkedin.com/in/tarun-adari
 
 Summary: 14+ years designing and deploying scalable distributed systems across e-commerce, supply chain, travel, and payment domains. Currently leading Cart & Checkout engineering at Albertsons Companies (Safeway), integrating Claude LLM, MCP servers, and autonomous AI agents into production workflows.
 
@@ -67,8 +67,8 @@ Payments & Commerce: CyberSource, PayPal, ATG, Manhattan EOM/DOM/OMS
 
 4. Priceline.com (Booking Holdings) — Senior Java Developer, Common Platform/Flights
    Apr 2018–May 2021 | Norwalk, CT
-   - Flights architecture integrating 10+ GDS providers (Agoda, Booking.com, Kayak)
-   - Splunk ML scripts for proactive crash prevention
+   - Flights architecture onboarding GDS providers/aggregators; multi-threaded layer interfacing 30+ external APIs across Hotels, Flights, Cars (Agoda, Booking.com, Kayak)
+   - Splunk ML anomaly-detection for proactive crash prevention
    Stack: Java 1.8, Spring, Kafka, SOLR, GCP, Splunk
 
 5. Manhattan Associates — Senior Java Developer, Enterprise Order Management
@@ -95,21 +95,24 @@ Payments & Commerce: CyberSource, PayPal, ATG, Manhattan EOM/DOM/OMS
 
 == PROJECTS ==
 
-1. Cart & Checkout Platform (Albertsons) — 2,300+ stores, Spring WebFlux, Kafka, Claude LLM, MCP Agents
-2. MCP-Powered Agentic Workflows (Albertsons) — Claude AI agents connected to internal systems
-3. Flight Analytics Platform (Onriva) — AI-driven with Amadeus GDS, ML recommendations
-4. Common Platform Services (Priceline) — 10+ GDS providers, Splunk ML crash prevention
-5. Enterprise Order Management (Manhattan) — Supply chain OMS with CyberSource/PayPal
-6. RummyScoreKeeper — React Native iOS app on the App Store, built with Fastlane
+1. Cart & Checkout Platform (Albertsons) — Microservices on AWS/Kubernetes serving millions of daily transactions across 2,300+ stores; cut checkout latency 20% via a Spring WebFlux reactive refactor; distributed tracing + structured logging via Kafka to reduce MTTR. Stack: Java 17, Spring WebFlux, Kafka, AWS EKS, Kubernetes, Cassandra, Dynatrace, Splunk
+2. MCP-Powered Agentic Workflows (Albertsons) — MCP-based AI agents (Claude) automating DevOps toil: branch cuts, merges to master, and automated Veracode vulnerability remediation, saving 5–6 engineering hours per service per week
+3. Flight Analytics Platform (Onriva) — JEE architecture for an AI-driven sustainable-travel platform; RESTful microservices integrating Amadeus GDS; full-stack Java + Node.js with JAXB/SOAP integrations
+4. Common Platform Services (Priceline) — Microservices onboarding new GDS providers/aggregators; multi-threaded layer interfacing 30+ external APIs across Hotels, Flights, and Cars; Splunk ML anomaly-detection for proactive crash prevention
+5. Enterprise Order Management (Manhattan) — Custom payment-API integrations (CyberSource, PayPal, Gift Cards) into Manhattan's DOM; 10–20% performance gains per client via DB index optimization, refactoring, and JVM/GC tuning (JMeter, thread/GC dumps)
+6. FedEx ePRS — JEE pricing-maintenance platform (Pricing Maintenance, Market Based Pricing, Rate Visibility, Service Selection) with DAO/Service layers, Hibernate HQL, IceFaces UI; deployed to WebLogic via Maven + Hudson CI
 
 == CERTIFICATIONS ==
 
-- AWS Certified Solutions Architect (Amazon Web Services)
-- AI Agents & MCP Integration (Anthropic)
+Earned:
+- AWS Certified Solutions Architect — Associate (Amazon Web Services)
+- Oracle Certified Professional, Java SE Developer (Oracle)
+- DataStax Apache Cassandra Developer (DataStax)
+
+Currently pursuing (in progress, not yet earned — describe as such):
 - Certified Kubernetes Application Developer (CNCF)
 - Spring Professional Certification (VMware/Broadcom)
-- Oracle Certified Professional — Java SE (Oracle)
-- Splunk Core Certified User (Splunk)
+- AI Agents & MCP Integration (Anthropic)
 
 == EDUCATION ==
 
@@ -152,6 +155,60 @@ app.post('/api/chat', async (req, res) => {
       ? 'Rate limit reached. Please try again in a moment.'
       : 'Something went wrong. Please try again.';
     res.status(500).json({ error: msg });
+  }
+});
+
+// ── Contact form ──
+// Sends an email via Resend (https://resend.com) when RESEND_API_KEY is set.
+// If it isn't configured, responds 503 so the client falls back to a mailto link.
+app.post('/api/contact', async (req, res) => {
+  const { name, email, subject, message } = req.body || {};
+
+  if (!name || !email || !message) {
+    return res.status(400).json({ error: 'Name, email, and message are required.' });
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Invalid email address.' });
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return res.status(503).json({ error: 'Email delivery not configured.' });
+  }
+
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const toAddr = process.env.CONTACT_TO || 'adari.tarun@gmail.com';
+  const fromAddr = process.env.CONTACT_FROM || 'Portfolio <onboarding@resend.dev>';
+
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: fromAddr,
+        to: [toAddr],
+        reply_to: email,
+        subject: `Portfolio inquiry: ${subject || 'No subject'} — from ${name}`,
+        html: `<p><strong>Name:</strong> ${esc(name)}</p>
+               <p><strong>Email:</strong> ${esc(email)}</p>
+               <p><strong>Subject:</strong> ${esc(subject || '(none)')}</p>
+               <hr>
+               <p>${esc(message).replace(/\n/g, '<br>')}</p>`,
+      }),
+    });
+
+    if (!r.ok) {
+      const detail = await r.text();
+      console.error('Resend error:', r.status, detail);
+      return res.status(502).json({ error: 'Failed to send message.' });
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Contact error:', err.message);
+    res.status(500).json({ error: 'Failed to send message.' });
   }
 });
 

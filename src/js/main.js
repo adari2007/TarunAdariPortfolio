@@ -50,68 +50,141 @@
 
 /* ── Contact form handler ── */
 (function initContactForm() {
-  const btn = document.querySelector('.contact-form .btn-primary');
-  if (!btn) return;
+  const form = document.getElementById('contact-form');
+  if (!form) return;
 
-  btn.addEventListener('click', () => {
-    const name    = document.querySelector('.contact-form input[placeholder="Your name"]');
-    const email   = document.querySelector('.contact-form input[type="email"]');
-    const subject = document.querySelector('.contact-form input[placeholder="What\'s this about?"]');
-    const message = document.querySelector('.contact-form textarea');
+  const btn = form.querySelector('.btn-primary');
+  const btnLabel = btn.textContent;
 
-    if (!name.value || !email.value || !message.value) {
-      showToast('Please fill in all required fields.', 'error');
-      return;
-    }
+  // Inline status element
+  const status = document.createElement('div');
+  status.className = 'form-status';
+  form.appendChild(status);
 
-    if (!isValidEmail(email.value)) {
-      showToast('Please enter a valid email address.', 'error');
-      return;
-    }
+  function setStatus(msg, type) {
+    status.textContent = msg;
+    status.className = `form-status show ${type}`;
+  }
 
-    // Build mailto link as fallback (replace with backend endpoint as needed)
-    const mailto = `mailto:adari.tarun@gmail.com?subject=${encodeURIComponent(subject.value || 'Portfolio Inquiry')}&body=${encodeURIComponent(`Name: ${name.value}\nEmail: ${email.value}\n\n${message.value}`)}`;
+  function mailtoFallback(name, email, subject, message) {
+    const mailto = `mailto:adari.tarun@gmail.com?subject=${encodeURIComponent(subject || 'Portfolio Inquiry')}&body=${encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\n${message}`)}`;
     window.location.href = mailto;
+    setStatus('Opening your email client…', 'success');
+  }
 
-    showToast('Opening your email client…', 'success');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const name    = form.name.value.trim();
+    const email   = form.email.value.trim();
+    const subject = form.subject.value.trim();
+    const message = form.message.value.trim();
+
+    if (!name || !email || !message) {
+      setStatus('Please fill in your name, email, and message.', 'error');
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setStatus('Please enter a valid email address.', 'error');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, subject, message }),
+      });
+
+      if (res.ok) {
+        setStatus("Thanks! Your message was sent — Tarun will get back to you soon.", 'success');
+        form.reset();
+      } else {
+        // Endpoint exists but not configured (e.g. no email key) → fall back to mailto
+        mailtoFallback(name, email, subject, message);
+      }
+    } catch {
+      // Server unreachable → fall back to mailto
+      mailtoFallback(name, email, subject, message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = btnLabel;
+    }
   });
 })();
 
-/* ── Typed hero subtitle cycling ── */
-(function initTypedEffect() {
-  const el = document.querySelector('.hero-title .highlight');
+/* ── Hero subtitle rotator (smooth fade/slide, no layout jank) ── */
+(function initRotator() {
+  const el = document.querySelector('.hero-rotator .rotator-text');
   if (!el) return;
 
   const phrases = ['AI / MCP / Agents', 'Claude & Anthropic', 'Agentic Workflows', 'Cloud Architecture'];
-  let i = 0;
-  let charIdx = 0;
-  let deleting = false;
 
-  function tick() {
-    const current = phrases[i];
-    if (deleting) {
-      charIdx--;
-      el.textContent = current.slice(0, charIdx);
-      if (charIdx === 0) {
-        deleting = false;
-        i = (i + 1) % phrases.length;
-        setTimeout(tick, 400);
-        return;
-      }
-      setTimeout(tick, 50);
-    } else {
-      charIdx++;
-      el.textContent = current.slice(0, charIdx);
-      if (charIdx === current.length) {
-        deleting = true;
-        setTimeout(tick, 2200);
-        return;
-      }
-      setTimeout(tick, 90);
-    }
+  // Respect reduced-motion: keep a single static label.
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  let i = 0;
+  function cycle() {
+    el.classList.add('swapping');               // fade + slide out
+    setTimeout(() => {
+      i = (i + 1) % phrases.length;
+      el.textContent = phrases[i];
+      el.classList.remove('swapping');           // fade + slide in
+    }, 400);
   }
 
-  setTimeout(tick, 1200);
+  setInterval(cycle, 2800);
+})();
+
+/* ── Count-up stats on scroll ── */
+(function initCountUp() {
+  const nums = document.querySelectorAll('.stat-num[data-count]');
+  if (!nums.length) return;
+
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const animate = (el) => {
+    const target = parseInt(el.dataset.count, 10);
+    const suffix = el.dataset.suffix || '';
+    if (reduce) { el.textContent = target + suffix; return; }
+
+    const duration = 1100;
+    const start = performance.now();
+    const step = (now) => {
+      const p = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      el.textContent = Math.round(eased * target) + suffix;
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        animate(entry.target);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.5 });
+
+  nums.forEach((n) => observer.observe(n));
+})();
+
+/* ── Theme toggle ── */
+(function initThemeToggle() {
+  const btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('theme', next); } catch (e) {}
+  });
 })();
 
 /* ── Back to top button ── */

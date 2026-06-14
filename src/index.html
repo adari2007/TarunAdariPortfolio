@@ -3,7 +3,43 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tarun Adari — Senior Staff Software Engineer</title>
+<title>Tarun Adari — Senior Staff Software Engineer | Java, AI Agents & Cloud Architecture</title>
+
+<!-- SEO -->
+<meta name="description" content="Tarun Adari — Senior Staff Software Engineer with 14+ years building scalable distributed systems across e-commerce, supply chain, travel, and payments. Specializing in Java, Spring, Kafka, AWS, and AI-native engineering with Claude, MCP, and autonomous agents.">
+<meta name="author" content="Tarun Adari">
+<meta name="keywords" content="Tarun Adari, Senior Staff Software Engineer, Java, Spring WebFlux, Kafka, AWS, Kubernetes, Microservices, Claude LLM, MCP, AI Agents, Cloud Architecture, Albertsons">
+<meta name="theme-color" content="#b8860b">
+<link rel="canonical" href="https://tarunadari.onrender.com/">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Tarun Adari — Senior Staff Software Engineer">
+<meta property="og:description" content="14+ years building enterprise distributed systems. Now leading Cart & Checkout engineering at Albertsons and integrating Claude, MCP, and AI agents into production.">
+<meta property="og:image" content="https://tarunadari.onrender.com/og-image.png">
+<meta property="og:url" content="https://tarunadari.onrender.com/">
+<meta property="og:site_name" content="Tarun Adari">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Tarun Adari — Senior Staff Software Engineer">
+<meta name="twitter:description" content="14+ years building enterprise distributed systems · Java · AI Agents · MCP · Cloud Architecture.">
+<meta name="twitter:image" content="https://tarunadari.onrender.com/og-image.png">
+
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+<!-- Set theme before paint to avoid flash -->
+<script>
+  (function () {
+    try {
+      var saved = localStorage.getItem('theme');
+      var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    } catch (e) {}
+  })();
+</script>
+
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 <style>
@@ -18,16 +54,22 @@
 <!-- NAV -->
 <nav>
   <a class="nav-logo" href="#hero">TA<span>.dev</span></a>
-  <ul class="nav-links">
-    <li><a href="#about">About</a></li>
-    <li><a href="#skills">Skills</a></li>
-    <li><a href="#experience">Experience</a></li>
-    <li><a href="#projects">Projects</a></li>
-    <li><a href="#certs">Certs</a></li>
-    <li><a href="#education">Education</a></li>
-    <li><a href="#blog">Blog</a></li>
-    <li><a href="#connect">Contact</a></li>
-  </ul>
+  <div class="nav-right">
+    <ul class="nav-links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#skills">Skills</a></li>
+      <li><a href="#experience">Experience</a></li>
+      <li><a href="#projects">Projects</a></li>
+      <li><a href="#certs">Certs</a></li>
+      <li><a href="#education">Education</a></li>
+      <li><a href="#blog">Blog</a></li>
+      <li><a href="#connect">Contact</a></li>
+    </ul>
+    <button id="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle theme">
+      <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
 </nav>
 
 <!-- HERO -->
@@ -38,13 +80,14 @@
     <span class="line2">Adari</span>
   </h1>
   <p class="hero-title">
-    14+ Years · Java &amp; Cloud Architecture · <span class="highlight">AI / MCP / Agents</span>
+    14+ Years · Java &amp; Cloud Architecture · <span class="hero-rotator" aria-live="polite"><span class="rotator-text">AI / MCP / Agents</span><span class="rotator-caret" aria-hidden="true"></span></span>
   </p>
   <p class="hero-summary">
     Building enterprise-grade distributed systems, microservices, and AI-powered solutions. Currently leading Cart &amp; Checkout engineering at Albertsons Companies — integrating Claude, MCP servers, and autonomous AI agents into modern e-commerce platforms.
   </p>
   <div class="hero-actions">
     <a href="#experience" class="btn-dark">View Experience →</a>
+    <a href="resume.pdf" class="btn-outline" download>↓ Résumé</a>
     <a href="#connect" class="btn-outline">Get In Touch</a>
     <button class="btn-ai" id="hero-chat-btn" type="button">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -53,19 +96,19 @@
   </div>
   <div class="hero-stats">
     <div class="stat">
-      <div class="stat-num">14+</div>
+      <div class="stat-num" data-count="14" data-suffix="+">14+</div>
       <div class="stat-label">Years Experience</div>
     </div>
-<div class="stat">
-      <div class="stat-num">3+</div>
+    <div class="stat">
+      <div class="stat-num" data-count="3" data-suffix="+">3+</div>
       <div class="stat-label">Years Supply Chain</div>
     </div>
     <div class="stat">
-      <div class="stat-num">5+</div>
+      <div class="stat-num" data-count="5" data-suffix="+">5+</div>
       <div class="stat-label">Years Travel Tech</div>
     </div>
     <div class="stat">
-      <div class="stat-num">7+</div>
+      <div class="stat-num" data-count="7" data-suffix="+">7+</div>
       <div class="stat-label">Years Retail</div>
     </div>
   </div>
@@ -358,7 +401,7 @@
       </div>
       <ul class="job-bullets">
         <li>Designed architecture for Flights Tools team to onboard Consolidators, Aggregators, and GDS Providers — competing with internal and external providers.</li>
-        <li>Built mission-critical microservices communicating with 10+ external services across the Booking Holdings portfolio (Agoda, Booking.com, Kayak).</li>
+        <li>Built a multi-threaded integration layer interfacing 30+ external APIs across Hotels, Flights, and Cars within the Booking Holdings portfolio (Agoda, Booking.com, Kayak) to unify fares in real time.</li>
         <li>Developed Splunk machine learning scripts to prevent application crashes and critical production incidents.</li>
         <li>Integrated Kafka, databases, and logs into Splunk for real-time data analysis and operational intelligence.</li>
       </ul>
@@ -495,16 +538,16 @@
       <div class="project-num">01</div>
       <div class="project-title">Cart &amp; Checkout Platform</div>
       <div class="project-company">Albertsons Companies / Safeway</div>
-      <p class="project-desc">Enterprise-scale Cart &amp; Checkout system serving 2,300+ stores. Architected reactive microservices with Spring WebFlux, integrated Kafka event streaming, and embedded Claude LLM + MCP agents for agentic checkout intelligence.</p>
+      <p class="project-desc">Led architecture and delivery of Cart &amp; Checkout microservices on AWS/Kubernetes, serving <strong>millions of daily transactions</strong> across 2,300+ stores. Cut checkout latency <strong>20%</strong> via a Spring WebFlux reactive refactor, and drove distributed tracing + structured logging through Kafka pipelines to sharply reduce MTTR.</p>
       <div class="project-tags">
         <span class="project-tag">Java 17</span>
         <span class="project-tag">Spring WebFlux</span>
         <span class="project-tag">Kafka</span>
-        <span class="project-tag">Claude LLM</span>
-        <span class="project-tag">MCP</span>
-        <span class="project-tag">AI Agents</span>
-        <span class="project-tag">AWS</span>
+        <span class="project-tag">AWS EKS</span>
         <span class="project-tag">Kubernetes</span>
+        <span class="project-tag">Cassandra</span>
+        <span class="project-tag">Dynatrace</span>
+        <span class="project-tag">Splunk</span>
       </div>
     </div>
 
@@ -512,13 +555,13 @@
       <div class="project-num">02</div>
       <div class="project-title">MCP-Powered Agentic Workflows</div>
       <div class="project-company">Albertsons Companies — AI Initiative</div>
-      <p class="project-desc">Designed and deployed Model Context Protocol (MCP) server integrations connecting Claude AI agents to internal systems — enabling autonomous task execution, document analysis, and workflow automation across engineering teams.</p>
+      <p class="project-desc">Built MCP-based AI agents (Claude) that automate routine DevOps toil across web services — branch cuts, merges to master, and automated <strong>Veracode vulnerability remediation</strong> — saving <strong>5–6 engineering hours per service every week</strong>.</p>
       <div class="project-tags">
         <span class="project-tag">Anthropic Claude</span>
         <span class="project-tag">MCP Servers</span>
         <span class="project-tag">AI Agents</span>
-        <span class="project-tag">Agentic AI</span>
-        <span class="project-tag">RAG</span>
+        <span class="project-tag">Agentic Workflows</span>
+        <span class="project-tag">DevOps Automation</span>
       </div>
     </div>
 
@@ -526,11 +569,13 @@
       <div class="project-num">03</div>
       <div class="project-title">Flight Analytics Platform</div>
       <div class="project-company">Onriva.com</div>
-      <p class="project-desc">AI-driven travel analytics system integrating Amadeus GDS for flight and hotel availability. Built microservices handling travel requests with ML-powered recommendation engine for sustainable travel.</p>
+      <p class="project-desc">Designed the JEE architecture for an AI-driven, sustainable-travel platform. Built RESTful microservices integrating <strong>Amadeus GDS</strong> flight/hotel availability, with full-stack delivery across Java and Node.js and JAXB-based SOAP service integrations.</p>
       <div class="project-tags">
         <span class="project-tag">Java 11</span>
-        <span class="project-tag">SOLR</span>
-        <span class="project-tag">Amadeus API</span>
+        <span class="project-tag">Amadeus GDS</span>
+        <span class="project-tag">Spring</span>
+        <span class="project-tag">Node.js</span>
+        <span class="project-tag">REST / SOAP</span>
         <span class="project-tag">AWS</span>
         <span class="project-tag">MongoDB</span>
       </div>
@@ -540,12 +585,14 @@
       <div class="project-num">04</div>
       <div class="project-title">Common Platform Services</div>
       <div class="project-company">Priceline.com (Booking Holdings)</div>
-      <p class="project-desc">Mission-critical flight services platform integrating 10+ external GDS providers. Developed Splunk ML scripts for proactive crash prevention and real-time operational intelligence across the Booking Holdings group.</p>
+      <p class="project-desc">Designed a microservices platform onboarding new GDS providers and aggregators, with a multi-threaded integration layer interfacing <strong>30+ external APIs</strong> across Hotels, Flights, and Cars to unify fares in real time. Built <strong>Splunk ML</strong> anomaly-detection to proactively prevent application crashes.</p>
       <div class="project-tags">
+        <span class="project-tag">Java 8</span>
         <span class="project-tag">Microservices</span>
         <span class="project-tag">Kafka</span>
         <span class="project-tag">Splunk ML</span>
         <span class="project-tag">GCP</span>
+        <span class="project-tag">Bamboo</span>
         <span class="project-tag">Oracle</span>
       </div>
     </div>
@@ -554,14 +601,15 @@
       <div class="project-num">05</div>
       <div class="project-title">Enterprise Order Management (EOM)</div>
       <div class="project-company">Manhattan Associates</div>
-      <p class="project-desc">Supply chain OMS with multi-channel order orchestration, CyberSource/PayPal payment APIs, and performance tuning using JProfiler, Dynatrace, and AWR reports. Deployed at global retail clients.</p>
+      <p class="project-desc">Built custom payment-API integrations (<strong>CyberSource, PayPal, Gift Cards</strong>) into Manhattan's DOM. Drove <strong>10–20% performance gains</strong> per client engagement through DB index optimization, code refactoring, and JVM/GC tuning validated with JMeter load tests and thread/GC-dump analysis.</p>
       <div class="project-tags">
         <span class="project-tag">Java</span>
         <span class="project-tag">Spring</span>
         <span class="project-tag">CyberSource</span>
-        <span class="project-tag">Redis</span>
-        <span class="project-tag">SOLR</span>
+        <span class="project-tag">JVM Tuning</span>
+        <span class="project-tag">JMeter</span>
         <span class="project-tag">Oracle 12c</span>
+        <span class="project-tag">Redis</span>
       </div>
     </div>
 
@@ -569,7 +617,7 @@
       <div class="project-num">06</div>
       <div class="project-title">FedEx ePRS — Pricing Maintenance System</div>
       <div class="project-company">Federal Express (FedEx) via Syntel</div>
-      <p class="project-desc">Designed and built FedEx ePRS — an advanced enterprise pricing maintenance platform with modules for Pricing Maintenance, Market Based Pricing, Rate Visibility, and Service Selection. Built on a full Java stack with Icefaces UI, Hibernate ORM, and Spring dependency injection deployed on WebLogic.</p>
+      <p class="project-desc">Designed and built FedEx ePRS — a JEE pricing-maintenance platform with modules for Pricing Maintenance, Market Based Pricing, Rate Visibility, and Service Selection. Implemented DAO/Service layers, Hibernate HQL, and an IceFaces UI, deployed to WebLogic via Maven and Hudson CI.</p>
       <div class="project-tags">
         <span class="project-tag">Java</span>
         <span class="project-tag">Spring 3</span>
@@ -592,57 +640,47 @@
     <div class="cert-card">
       <div class="cert-icon">☁️</div>
       <div>
-        <div class="cert-name">AWS Certified Solutions Architect</div>
+        <div class="cert-name">AWS Certified Solutions Architect — Associate</div>
         <div class="cert-issuer">Amazon Web Services</div>
-      </div>
-    </div>
-    <div class="cert-card">
-      <div class="cert-icon">🤖</div>
-      <div>
-        <div class="cert-name">AI Agents &amp; MCP Integration</div>
-        <div class="cert-issuer">Anthropic / Continuing Education</div>
-      </div>
-    </div>
-    <div class="cert-card">
-      <div class="cert-icon">☸️</div>
-      <div>
-        <div class="cert-name">Certified Kubernetes Application Developer</div>
-        <div class="cert-issuer">Cloud Native Computing Foundation</div>
-      </div>
-    </div>
-    <div class="cert-card">
-      <div class="cert-icon">🍃</div>
-      <div>
-        <div class="cert-name">Spring Professional Certification</div>
-        <div class="cert-issuer">VMware / Broadcom</div>
       </div>
     </div>
     <div class="cert-card">
       <div class="cert-icon">☕</div>
       <div>
-        <div class="cert-name">Oracle Certified Professional — Java SE</div>
-        <div class="cert-issuer">Oracle Corporation</div>
-      </div>
-    </div>
-    <div class="cert-card">
-      <div class="cert-icon">📊</div>
-      <div>
-        <div class="cert-name">Splunk Core Certified User</div>
-        <div class="cert-issuer">Splunk Inc.</div>
+        <div class="cert-name">Oracle Certified Professional — Java SE Developer</div>
+        <div class="cert-issuer">Oracle</div>
       </div>
     </div>
     <div class="cert-card">
       <div class="cert-icon">🗄️</div>
       <div>
-        <div class="cert-name">Apache Cassandra Certified Developer</div>
-        <div class="cert-issuer">DataStax / Apache Software Foundation</div>
+        <div class="cert-name">DataStax Apache Cassandra Developer</div>
+        <div class="cert-issuer">DataStax</div>
       </div>
     </div>
-    <div class="cert-card">
-      <div class="cert-icon">📨</div>
+  </div>
+
+  <div class="cert-subhead">Currently Pursuing</div>
+  <div class="certs-grid">
+    <div class="cert-card pursuing">
+      <div class="cert-icon">☸️</div>
       <div>
-        <div class="cert-name">Confluent Certified Developer for Apache Kafka</div>
-        <div class="cert-issuer">Confluent</div>
+        <div class="cert-name">Certified Kubernetes Application Developer <span class="cert-progress">In Progress</span></div>
+        <div class="cert-issuer">Cloud Native Computing Foundation</div>
+      </div>
+    </div>
+    <div class="cert-card pursuing">
+      <div class="cert-icon">🍃</div>
+      <div>
+        <div class="cert-name">Spring Professional Certification <span class="cert-progress">In Progress</span></div>
+        <div class="cert-issuer">VMware / Broadcom</div>
+      </div>
+    </div>
+    <div class="cert-card pursuing">
+      <div class="cert-icon">🤖</div>
+      <div>
+        <div class="cert-name">AI Agents &amp; MCP Integration <span class="cert-progress">In Progress</span></div>
+        <div class="cert-issuer">Anthropic / Continuing Education</div>
       </div>
     </div>
   </div>
@@ -737,27 +775,27 @@
     </div>
 
     <!-- Contact Form -->
-    <div class="contact-form">
+    <form class="contact-form" id="contact-form" novalidate>
       <div class="form-row">
         <div class="form-group">
-          <label>Name</label>
-          <input type="text" placeholder="Your name">
+          <label for="cf-name">Name</label>
+          <input id="cf-name" name="name" type="text" placeholder="Your name" autocomplete="name" required>
         </div>
         <div class="form-group">
-          <label>Email</label>
-          <input type="email" placeholder="your@email.com">
+          <label for="cf-email">Email</label>
+          <input id="cf-email" name="email" type="email" placeholder="your@email.com" autocomplete="email" required>
         </div>
       </div>
       <div class="form-group">
-        <label>Subject</label>
-        <input type="text" placeholder="What's this about?">
+        <label for="cf-subject">Subject</label>
+        <input id="cf-subject" name="subject" type="text" placeholder="What's this about?">
       </div>
       <div class="form-group">
-        <label>Message</label>
-        <textarea placeholder="Tell me what you have in mind…"></textarea>
+        <label for="cf-message">Message</label>
+        <textarea id="cf-message" name="message" placeholder="Tell me what you have in mind…" required></textarea>
       </div>
-      <button class="btn-primary" type="button" style="width:100%; justify-content:center;">Send Message →</button>
-    </div>
+      <button class="btn-primary" type="submit" style="width:100%; justify-content:center;">Send Message →</button>
+    </form>
 
   </div>
 </section>
