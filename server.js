@@ -158,7 +158,14 @@ app.post('/api/chat', async (req, res) => {
     res.json({ content: text });
   } catch (err) {
     console.error('Chat error:', err.message, err.status, err.errorDetails);
-    res.status(500).json({ error: `DEBUG: ${err.message}` });
+    const status = err.status || err.httpStatusCode || 0;
+    const errStr = String(err.message || '').toLowerCase();
+    const msg = (status === 401 || status === 403 || errStr.includes('api_key') || errStr.includes('api key'))
+      ? 'Invalid API key. Check your .env file.'
+      : (status === 429 || errStr.includes('quota') || errStr.includes('resource_exhausted'))
+      ? 'Rate limit reached. Please try again in a moment.'
+      : 'Something went wrong. Please try again.';
+    res.status(500).json({ error: msg });
   }
 });
 
