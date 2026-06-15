@@ -140,7 +140,7 @@ app.post('/api/chat', async (req, res) => {
     }
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-1.5-flash',
       systemInstruction: SYSTEM_PROMPT,
     });
 
@@ -157,11 +157,12 @@ app.post('/api/chat', async (req, res) => {
 
     res.json({ content: text });
   } catch (err) {
-    console.error('Chat error:', err.message);
-    const status = err.status || err.httpStatusCode;
-    const msg = status === 401 || status === 403
+    console.error('Chat error:', err.message, err.status, err.errorDetails);
+    const status = err.status || err.httpStatusCode || 0;
+    const errStr = String(err.message || '').toLowerCase();
+    const msg = (status === 401 || status === 403 || errStr.includes('api_key') || errStr.includes('api key'))
       ? 'Invalid API key. Check your .env file.'
-      : status === 429
+      : (status === 429 || errStr.includes('quota') || errStr.includes('resource_exhausted'))
       ? 'Rate limit reached. Please try again in a moment.'
       : 'Something went wrong. Please try again.';
     res.status(500).json({ error: msg });
