@@ -1,12 +1,12 @@
 require('dotenv').config();
 const express = require('express');
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const path = require('path');
 
-if (!process.env.ANTHROPIC_API_KEY) {
-  console.error('\n❌  ANTHROPIC_API_KEY is not set.');
-  console.error('   Create a .env file with: ANTHROPIC_API_KEY=your_key_here');
-  console.error('   Get your key at https://console.anthropic.com\n');
+if (!process.env.GEMINI_API_KEY) {
+  console.error('\n❌  GEMINI_API_KEY is not set.');
+  console.error('   Create a .env file with: GEMINI_API_KEY=your_key_here');
+  console.error('   Get your key at https://aistudio.google.com\n');
   process.exit(1);
 }
 
@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 8000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'src')));
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const SYSTEM_PROMPT = `You are an AI assistant on Tarun Adari's portfolio website. Answer questions about his professional background, skills, experience, and projects concisely and professionally. Always refer to Tarun in the third person.
 
@@ -139,19 +139,29 @@ app.post('/api/chat', async (req, res) => {
       return res.status(400).json({ error: 'Invalid messages' });
     }
 
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 512,
-      system: SYSTEM_PROMPT,
-      messages,
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      systemInstruction: SYSTEM_PROMPT,
     });
 
-    res.json({ content: response.content[0].text });
+    // Convert messages to Gemini format (role: user/model, parts: [{text}])
+    const history = messages.slice(0, -1).map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+    const lastMessage = messages[messages.length - 1].content;
+
+    const chat = model.startChat({ history });
+    const result = await chat.sendMessage(lastMessage);
+    const text = result.response.text();
+
+    res.json({ content: text });
   } catch (err) {
     console.error('Chat error:', err.message);
-    const msg = err.status === 401
+    const status = err.status || err.httpStatusCode;
+    const msg = status === 401 || status === 403
       ? 'Invalid API key. Check your .env file.'
-      : err.status === 429
+      : status === 429
       ? 'Rate limit reached. Please try again in a moment.'
       : 'Something went wrong. Please try again.';
     res.status(500).json({ error: msg });
